@@ -4,109 +4,134 @@ import (
 	"encoding/json"
 	"fmt"
 	"jornada-backend/models"
-	"jornada-backend/services" // Importar el servicio
+	"jornada-backend/services" 
 	"log"
 	"net/http"
+    "errors"
+    "strings"
 )
 
 // LoginHandler maneja las solicitudes de login
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-    // Acepta solo solicitudes POST
+    // Verificar que el método de la solicitud sea POST
     if r.Method != http.MethodPost {
         http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
         return
     }
 
-    // Verifica el Content-Type de la solicitud
+    // Leer el cuerpo de la solicitud
+    defer r.Body.Close() // Cierra el cuerpo de la solicitud al final
+
+    // Decodificar el cuerpo JSON en la estructura LoginRequest
     var loginData models.LoginRequest
-    // Decodifica el cuerpo de la solicitud JSON en la estructura LoginRequest
+    // Decodificar el cuerpo JSON en la estructura LoginRequest
     if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
         http.Error(w, "Error al procesar los datos", http.StatusBadRequest)
         return
     }
 
-    // Llama a la función para obtener el token Dolibarr, pasando el nombre de usuario y la contraseña
+    // Validar que los campos no estén vacíos
+    if loginData.Usuario == "" || loginData.Contrasena == "" {
+        http.Error(w, "Usuario o contraseña no proporcionados", http.StatusBadRequest)
+        return
+    }
+
+    // Llamar al servicio para obtener el token de DOLIBARR
     token, userID, err := services.GetDolibarrToken(loginData.Usuario, loginData.Contrasena)
     if err != nil {
         http.Error(w, fmt.Sprintf("Error al obtener el token: %v", err), http.StatusUnauthorized)
         return
     }
-
-    // Si el token es válido, crea la respuesta con el token y el user_id
+    // Verificar si el token es válido
+    if token == "" {
+        http.Error(w, "Token de autorización no válido", http.StatusUnauthorized)
+        return
+    }
+    // Crear la respuesta de login
     response := models.LoginResponse{
         DOLAPIKEY: token,
         Usuario:   loginData.Usuario,
-        UserID:    fmt.Sprintf("%d", userID), // Convierte user_id a string si es necesario
+        UserID:    fmt.Sprintf("%d", userID),
     }
-
-    // Configura la cabecera de respuesta como JSON
+    
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(response)
 }
 
-
-
+// ClientesHandler maneja solicitudes para obtener uno o más clientes
 func ClientesHandler(w http.ResponseWriter, r *http.Request) {
-    // Acepta solo solicitudes GET
+    // Verificar que el método de la solicitud sea GET
     if r.Method != http.MethodGet {
         http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
         return
     }
 
-    // Obtiene el token de la cabecera de la solicitud
-    token := r.Header.Get("Authorization")
+    // Obtener el token desde las cabeceras de la solicitud
+    token, err := extraerToken(r.Header.Get("Authorization"))
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusUnauthorized)
+        return
+    }
+
+    // Verificar si el token está presente
     if token == "" {
         http.Error(w, "Token de autorización no proporcionado", http.StatusUnauthorized)
         return
     }
 
-    // Verificar si el token tiene el prefijo "Bearer " y extraer solo el token
-    if len(token) > 7 && token[:7] == "Bearer " {
-        token = token[7:] // Extraer solo el token
-    } else {
-        http.Error(w, "Token de autorización incorrecto", http.StatusUnauthorized)
+    // Obtener el ID del cliente desde la URL
+    id := r.URL.Query().Get("id")
+
+    // Verificar si se proporcionó un ID
+    if id == "" {
+        http.Error(w, "ID de cliente no proporcionado", http.StatusBadRequest)
         return
     }
 
-    // Obtiene el parámetro "id" de la URL de la consulta, si existe
-    id := r.URL.Query().Get("id")
-
-    // Llama a la función para obtener los clientes, pasando el id si está presente
+    // Llamada al servicio de obtener clientes, pasando el token
     var clientes []models.Cliente
-    var err error
+
+    // Verificar si se proporcionó un ID
     if id != "" {
-        // Si se pasa un id, obtiene ese cliente en particular
+        // Llamar al servicio para obtener cliente por ID
         cliente, err := services.ObtenerClientePorID(id, token)
         if err != nil {
             http.Error(w, fmt.Sprintf("Error al obtener el cliente: %v", err), http.StatusInternalServerError)
             return
         }
-        clientes = append(clientes, *cliente) // Si es un cliente, lo agregamos al array
-    } else {
-        // Si no se pasa id, obtiene todos los clientes
+
+        // Verificar si el cliente existe
+        if cliente == nil {
+            http.Error(w, "Cliente no encontrado", http.StatusNotFound)
+            return
+        }
+
+        // Agregar el cliente a la lista de clientes
+        clientes = append(clientes, *cliente)
+    }else {
+        // Llamar al servicio para obtener todos los clientes
         clientes, err = services.ObtenerClientes(token)
+        if err != nil {
+            log.Printf("Error al obtener los clientes: %v", err)
+            http.Error(w, fmt.Sprintf("Error al obtener los clientes: %v", err), http.StatusInternalServerError)
+            return
+        }
     }
 
-    // Si ocurre un error al obtener los clientes, devuelve un error 500
-    if err != nil {
-        log.Printf("Error al obtener los clientes: %v", err)
-        http.Error(w, fmt.Sprintf("Error al obtener los clientes: %v", err), http.StatusInternalServerError)
-        return
-    }
-
-    // Si no hay clientes, devolver un array vacío
-    if len(clientes) == 0 {
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusOK)
-        json.NewEncoder(w).Encode([]models.Cliente{}) // Responder con un array vacío si no hay clientes
-        return
-    }
-
-    // Configura la cabecera de respuesta como JSON
+    // Responder con la lista de clientes
     w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusOK)
 
-    // Codifica los clientes en formato JSON y los envía como respuesta
+    // Codificar la respuesta en JSON
     if err := json.NewEncoder(w).Encode(clientes); err != nil {
         http.Error(w, fmt.Sprintf("Error al codificar la respuesta: %v", err), http.StatusInternalServerError)
     }
+}
+
+// extraerToken valida y extrae el token del header Authorization
+func extraerToken(authorizationHeader string) (string, error) {
+    if strings.HasPrefix(authorizationHeader, "Bearer ") {
+        return strings.TrimPrefix(authorizationHeader, "Bearer "), nil
+    }
+    return "", errors.New("token de autorización incorrecto")
 }
