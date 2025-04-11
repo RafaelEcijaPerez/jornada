@@ -93,3 +93,34 @@ func ObtenerClientePorID(id string, token string) (*models.Cliente, error) {
 
 	return nil, fmt.Errorf("cliente con ID %s no encontrado", id)
 }
+
+func EliminarCliente(id string, token string) error {
+	// Construir la URL con el ID del cliente
+	url := fmt.Sprintf("%s/%s", DolibarrAPI, id)
+
+	// Crear la solicitud HTTP DELETE
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return fmt.Errorf("error creando la solicitud DELETE: %v", err)
+	}
+
+	// Establecer encabezados
+	req.Header.Set("DOLAPIKEY", token)
+	req.Header.Set("Accept", "application/json")
+
+	// Ejecutar la solicitud
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error al realizar la solicitud DELETE: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Verificar código de respuesta
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("error al eliminar cliente: %s - %s", resp.Status, string(body))
+	}
+
+	return nil
+}

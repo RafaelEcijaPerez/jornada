@@ -66,3 +66,34 @@ func ClienteByIDHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(cliente)
 }
+func ClienteDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Obtener el token desde las cabeceras
+	token := r.Header.Get("Authorization")
+	if token == "" {
+		http.Error(w, "Token de autorización no proporcionado", http.StatusUnauthorized)
+		return
+	}
+
+	// Obtener el ID del cliente desde la URL
+	partes := strings.Split(r.URL.Path, "/")
+	if len(partes) < 3 || partes[2] == "" {
+		http.Error(w, "ID de cliente no proporcionado", http.StatusBadRequest)
+		return
+	}
+	id := partes[2]
+
+	// Llamar al servicio para eliminar cliente
+	err := services.EliminarCliente(id, token)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al eliminar el cliente: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Confirmar eliminación
+	w.WriteHeader(http.StatusNoContent) // 204 No Content
+}
