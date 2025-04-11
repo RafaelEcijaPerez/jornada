@@ -18,4 +18,10 @@ func ConfigurarRutas() {
     // Ruta para obtener las reuniones
     http.HandleFunc("/meetings", handlers.MeetingsHandler)
 
+    // Ruta para iniciar sesión de trabajo
+    http.HandleFunc("/work-session/start", handlers.IniciarSesionTrabajoHandler) // Ruta para iniciar sesión de trabajo
+	// Ruta para finalizar sesión de trabajo
+    http.HandleFunc("/work-session/end", handlers.FinalizarSesionTrabajoHandler) // Ruta para finalizar sesión de trabajo
+	
+
 }
