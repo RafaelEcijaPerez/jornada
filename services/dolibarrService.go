@@ -7,73 +7,62 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 )
 
-// GetDolibarrToken realiza la solicitud a la API de Dolibarr
-func GetDolibarrToken(username, password string) (string, int, error) {
-    url := "http://localhost/dolibarr/api/index.php/login"
+func GetDolibarrToken(login, password string) (string, int, error) {
+	log.Printf("Recibiendo login para el usuario: %s", login)
 
-    loginData := map[string]string{
-        "login":    username,
-        "password": password,
-    }
+	// Preparar los datos JSON
+	data := map[string]string{
+		"login":    login,
+		"password": password,
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "", 0, fmt.Errorf("error al convertir los datos a JSON: %v", err)
+	}
 
-    jsonData, err := json.Marshal(loginData)
-    if err != nil {
-        return "", 0, fmt.Errorf("error al crear los datos JSON: %v", err)
-    }
+	// Hacer la solicitud POST a Dolibarr
+	resp, err := http.Post("http://localhost:8080/dolibarr/api/index.php/login", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", 0, fmt.Errorf("error al hacer la solicitud a Dolibarr: %v", err)
+	}
+	defer resp.Body.Close()
 
-    log.Printf("Enviando solicitud a Dolibarr con datos: %s", string(jsonData))
+	log.Printf("Código de respuesta de Dolibarr: %d", resp.StatusCode)
 
-    req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-    if err != nil {
-        return "", 0, fmt.Errorf("error al crear la solicitud HTTP: %v", err)
-    }
+	// Leer el cuerpo de la respuesta
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", 0, fmt.Errorf("error al leer el cuerpo de la respuesta: %v", err)
+	}
 
-    req.Header.Set("Content-Type", "application/json")
+	bodyStr := string(bodyBytes)
+	log.Printf("Respuesta de Dolibarr: %s", bodyStr)
 
-    client := &http.Client{}
-    resp, err := client.Do(req)
-    if err != nil {
-        return "", 0, fmt.Errorf("error al hacer la solicitud a Dolibarr: %v", err)
-    }
-    defer resp.Body.Close()
+	// Verificar si es HTML (probable error)
+	if len(bodyStr) > 0 && bodyStr[0] == '<' {
+		return "", 0, fmt.Errorf("respuesta inesperada en HTML de Dolibarr: %s", bodyStr)
+	}
 
-    log.Printf("Código de respuesta de Dolibarr: %d", resp.StatusCode)
+	// Parsear el JSON
+	var result map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
+		return "", 0, fmt.Errorf("error al decodificar JSON: %v", err)
+	}
 
-    body, err := io.ReadAll(resp.Body)
-    if err != nil {
-        return "", 0, fmt.Errorf("error al leer la respuesta de Dolibarr: %v", err)
-    }
+	successData, ok := result["success"].(map[string]interface{})
+	if !ok {
+		return "", 0, fmt.Errorf("respuesta sin campo 'success': %v", result)
+	}
 
-    log.Printf("Respuesta de Dolibarr: %s", string(body))
+	token, ok := successData["token"].(string)
+	if !ok {
+		return "", 0, fmt.Errorf("token no encontrado o inválido en la respuesta: %v", successData)
+	}
 
-    var response map[string]interface{}
-    if err := json.Unmarshal(body, &response); err != nil {
-        return "", 0, fmt.Errorf("error al parsear la respuesta de Dolibarr: %v", err)
-    }
+	// Opcional: puedes ignorar el userID o devolver 0 si no lo usas
+	userID := 0
 
-    if success, ok := response["success"].(map[string]interface{}); ok {
-        if token, ok := success["token"].(string); ok {
-            // Asegúrate de extraer también el user_id de manera flexible
-            if userID, ok := success["user_id"].(interface{}); ok {
-                log.Printf("user_id recibido: %v", userID)
-                switch v := userID.(type) {
-                case float64:
-                    return token, int(v), nil
-                case string:
-                    // Convierte el user_id a int si es una cadena
-                    if userInt, err := strconv.Atoi(v); err == nil {
-                        return token, userInt, nil
-                    }
-                    return "", 0, fmt.Errorf("no se pudo convertir user_id de cadena a entero: %s", v)
-                default:
-                    return "", 0, fmt.Errorf("user_id tiene un tipo inesperado: %T", v)
-                }
-            }
-        }
-    }
-
-    return "", 0, fmt.Errorf("no se encontró el token o user_id en la respuesta")
+	return token, userID, nil
 }

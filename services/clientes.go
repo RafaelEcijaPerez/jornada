@@ -10,14 +10,13 @@ import (
 )
 
 // Constante de la URL de la API de Dolibarr
-const DolibarrAPI = "http://localhost/dolibarr/api/index.php/thirdparties"
+const DolibarrAPI = "http://localhost:8080/dolibarr/api/index.php/thirdparties"
 
 // ObtenerClientes hace la solicitud a Dolibarr y devuelve los clientes
 // Recibe el token como argumento, para usarlo en la autenticación
 func ObtenerClientes(token string) ([]models.Cliente, error) {
 	// Crear la solicitud HTTP GET a la API de Dolibarr
 	req, err := http.NewRequest("GET", DolibarrAPI, nil)
-	// Crear la solicitud HTTP
 	if err != nil {
 		return nil, fmt.Errorf("error creando la solicitud: %v", err)
 	}
@@ -37,7 +36,8 @@ func ObtenerClientes(token string) ([]models.Cliente, error) {
 
 	// Verificar el código de estado de la respuesta
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error en la respuesta de Dolibarr: %v", resp.Status)
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("error en la respuesta de Dolibarr: %v - %s", resp.Status, string(body))
 	}
 
 	// Leer el cuerpo de la respuesta
@@ -47,7 +47,7 @@ func ObtenerClientes(token string) ([]models.Cliente, error) {
 	}
 
 	// Imprimir la respuesta JSON completa para depuración
-	fmt.Println(string(body))
+	fmt.Println("Respuesta de Dolibarr:", string(body))
 
 	// Deserializar la respuesta JSON en la estructura de clientes
 	var clientes []models.Cliente

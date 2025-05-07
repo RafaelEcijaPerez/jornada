@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// ClientesHandler maneja la petición GET /clientes// ClientesHandler maneja las solicitudes para obtener los clientes
+// ClientesListHandler maneja las solicitudes GET para obtener la lista de clientes
 func ClientesListHandler(w http.ResponseWriter, r *http.Request) {
 	// Verificar que el método de la solicitud sea GET
 	if r.Method != http.MethodGet {
@@ -36,6 +36,7 @@ func ClientesListHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(clientes)
 }
 
+// ClienteByIDHandler maneja las solicitudes GET para obtener un cliente específico por su ID
 func ClienteByIDHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
@@ -66,6 +67,8 @@ func ClienteByIDHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(cliente)
 }
+
+// ClienteDeleteHandler maneja las solicitudes DELETE para eliminar un cliente por su ID
 func ClienteDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)

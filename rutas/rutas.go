@@ -11,9 +11,9 @@ func ConfigurarRutas() {
 	http.HandleFunc("/login", handlers.LoginHandler) // Ruta para hacer login
 
 	// Ruta para obtener los clientes
-	http.HandleFunc("/clients", handlers.ClientesHandler) // Ruta para obtener los clientes
+	http.HandleFunc("/thirdparties", handlers.ClientesHandler) // Ruta para obtener los clientes
 	// Ruta para obtener un cliente específico
-	http.HandleFunc("/clients/", handlers.ClienteByIDHandler)
+	http.HandleFunc("/thirdparties/", handlers.ClienteByIDHandler)
 	// Ruta para eliminar un cliente
 	// Esto es válido con net/http (sin mux)
 	http.HandleFunc("/clientes/", handlers.ClienteDeleteHandler)

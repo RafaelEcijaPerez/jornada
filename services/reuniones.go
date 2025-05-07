@@ -12,7 +12,7 @@ import (
 
 
 func GetMeetingsForUser(userID int) ([]models.Meeting, error) {
-    url := "http://localhost/dolibarr/api/index.php/agendaevents" // Endpoint corregido
+    url := "http://localhost:8080/dolibarr/api/index.php/agendaevents" // Endpoint corregido
 
     // Crea un cliente HTTP con un timeout
     client := &http.Client{Timeout: 10 * time.Second}
