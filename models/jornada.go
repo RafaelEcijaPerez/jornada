@@ -1,22 +1,15 @@
 package models
 
-import (
-	"time"
-)
-
-// WorkSession representa una sesión de trabajo
 type WorkSession struct {
-	ID        uint      `json:"id" gorm:"primary_key"`
-	UserID    uint      `json:"user_id"` // Relación con el usuario que tiene la sesión de trabajo
-	StartTime time.Time `json:"startTime"`
-	EndTime   time.Time `json:"endTime"`
-	Duration  int64     `json:"duration"` // Duración en segundos
-
-	// Opcional: Se puede agregar una relación con el usuario si tienes un modelo de usuario
-	// User     User      `gorm:"foreignKey:UserID" json:"user"`
+	ID          int    `json:"id,omitempty"`
+	Token       string `json:"token"`
+	FechaInicio string `json:"fecha_inicio,omitempty"`
+	FechaFin    string `json:"fecha_fin,omitempty"`
+	Estado      string `json:"estado,omitempty"`
 }
 
-// Método para calcular la duración en segundos
-func (ws *WorkSession) CalculateDuration() {
-	ws.Duration = int64(ws.EndTime.Sub(ws.StartTime).Seconds())
+type ApiResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
 }

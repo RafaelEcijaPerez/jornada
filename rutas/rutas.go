@@ -15,15 +15,10 @@ func ConfigurarRutas() {
 	// Ruta para obtener un cliente específico
 	http.HandleFunc("/thirdparties/", handlers.ClienteByIDHandler)
 	// Ruta para eliminar un cliente
-	// Esto es válido con net/http (sin mux)
-	http.HandleFunc("/clientes/", handlers.ClienteDeleteHandler)
-
-	// Ruta para obtener las reuniones
-	http.HandleFunc("/meetings", handlers.MeetingsHandler)
 
 	// Ruta para iniciar sesión de trabajo
-	http.HandleFunc("/work-session/start", handlers.IniciarSesionTrabajoHandler) // Ruta para iniciar sesión de trabajo
-	// Ruta para finalizar sesión de trabajo
-	http.HandleFunc("/work-session/end", handlers.FinalizarSesionTrabajoHandler) // Ruta para finalizar sesión de trabajo
+	http.HandleFunc("/work-sessions/start", handlers.StartWorkSessionHandler)
+	http.HandleFunc("/work-sessions/end", handlers.EndWorkSessionHandler)
+	http.HandleFunc("/work-sessions/update", handlers.UpdateWorkSessionHandler)
 
 }

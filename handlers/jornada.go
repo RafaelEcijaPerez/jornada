@@ -8,56 +8,65 @@ import (
 	"net/http"
 )
 
-// IniciarSesionTrabajoHandler maneja las solicitudes para iniciar una sesión de trabajo
-func IniciarSesionTrabajoHandler(w http.ResponseWriter, r *http.Request) {
-	// Acepta solo solicitudes POST
+func StartWorkSessionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Decodificar el cuerpo de la solicitud (requiere el userID)
-	var sessionData models.WorkSession
-	if err := json.NewDecoder(r.Body).Decode(&sessionData); err != nil {
-		http.Error(w, "Error al procesar los datos", http.StatusBadRequest)
+	var session models.WorkSession
+	if err := json.NewDecoder(r.Body).Decode(&session); err != nil {
+		http.Error(w, "Datos inválidos", http.StatusBadRequest)
 		return
 	}
 
-	// Llamar al servicio para iniciar la sesión de trabajo
-	workSession, err := services.IniciarSesionTrabajo(sessionData.UserID)
+	response, err := services.StartWorkSession(session.Token, session.FechaInicio)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error al iniciar la sesión de trabajo: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Configurar la respuesta como JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(workSession)
+	json.NewEncoder(w).Encode(response)
 }
 
-// FinalizarSesionTrabajoHandler maneja las solicitudes para finalizar una sesión de trabajo
-func FinalizarSesionTrabajoHandler(w http.ResponseWriter, r *http.Request) {
-	// Acepta solo solicitudes POST
+func EndWorkSessionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Decodificar el cuerpo de la solicitud (requiere el sessionID)
-	var sessionData models.WorkSession
-	if err := json.NewDecoder(r.Body).Decode(&sessionData); err != nil {
-		http.Error(w, "Error al procesar los datos", http.StatusBadRequest)
+	var session models.WorkSession
+	if err := json.NewDecoder(r.Body).Decode(&session); err != nil {
+		http.Error(w, "Datos inválidos", http.StatusBadRequest)
 		return
 	}
 
-	// Llamar al servicio para finalizar la sesión de trabajo
-	workSession, err := services.FinalizarSesionTrabajo(sessionData.ID)
+	response, err := services.EndWorkSession(session.Token, session.FechaFin)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error al finalizar la sesión de trabajo: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Configurar la respuesta como JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(workSession)
+	json.NewEncoder(w).Encode(response)
+}
+
+func UpdateWorkSessionHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var session models.WorkSession
+	if err := json.NewDecoder(r.Body).Decode(&session); err != nil {
+		http.Error(w, "Datos inválidos", http.StatusBadRequest)
+		return
+	}
+
+	response, err := services.UpdateWorkSession(session.Token, session.Estado)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(response)
 }

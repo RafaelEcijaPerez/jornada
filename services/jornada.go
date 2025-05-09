@@ -1,56 +1,83 @@
 package services
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"jornada-backend/models"
-	"time"
-	"sync"
+	"net/http"
 )
 
-// Estructura para almacenar las sesiones de trabajo en memoria
-var workSessions = make(map[uint]*models.WorkSession)
-var mu sync.Mutex // Mutex para manejar la concurrencia
+const baseURL = "http://localhost:8080/dolibarr/api/index.php/jornadasapi/jornadas"
 
-// Función para iniciar una nueva sesión de trabajo
-func IniciarSesionTrabajo(userID uint) (*models.WorkSession, error) {
-	mu.Lock() // Bloquear acceso concurrente
-	defer mu.Unlock()
+func StartWorkSession(token string, fechaInicio string) (models.ApiResponse, error) {
+	url := fmt.Sprintf("%s/start", baseURL)
 
-	startTime := time.Now()
-
-	// Crear una nueva sesión de trabajo en memoria
-	workSession := &models.WorkSession{
-		ID:        uint(len(workSessions) + 1), // ID incremental
-		UserID:    userID,
-		StartTime: startTime,
-		EndTime:   time.Time{}, // El EndTime estará vacío hasta que se finalice
+	requestBody := models.WorkSession{
+		Token:       token,
+		FechaInicio: fechaInicio,
 	}
 
-	// Guardar la sesión de trabajo en memoria
-	workSessions[workSession.ID] = workSession
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return models.ApiResponse{}, err
+	}
 
-	return workSession, nil
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return models.ApiResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var response models.ApiResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
 }
 
-// Función para finalizar una sesión de trabajo
-func FinalizarSesionTrabajo(sessionID uint) (*models.WorkSession, error) {
-	mu.Lock() // Bloquear acceso concurrente
-	defer mu.Unlock()
+func EndWorkSession(token string, fechaFin string) (models.ApiResponse, error) {
+	url := fmt.Sprintf("%s/end", baseURL)
 
-	// Buscar la sesión de trabajo por su ID
-	workSession, exists := workSessions[sessionID]
-	if !exists {
-		return nil, fmt.Errorf("sesión de trabajo no encontrada")
+	requestBody := models.WorkSession{
+		Token:    token,
+		FechaFin: fechaFin,
 	}
 
-	// Marcar la hora de fin de la sesión
-	workSession.EndTime = time.Now()
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return models.ApiResponse{}, err
+	}
 
-	// Calcular la duración en segundos
-	workSession.CalculateDuration()
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return models.ApiResponse{}, err
+	}
+	defer resp.Body.Close()
 
-	// Actualizar la sesión en memoria (simulando la actualización)
-	workSessions[workSession.ID] = workSession
+	var response models.ApiResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
+}
 
-	return workSession, nil
+func UpdateWorkSession(token string, estado string) (models.ApiResponse, error) {
+	url := fmt.Sprintf("%s/update", baseURL)
+
+	requestBody := models.WorkSession{
+		Token:  token,
+		Estado: estado,
+	}
+
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return models.ApiResponse{}, err
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return models.ApiResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var response models.ApiResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
 }
