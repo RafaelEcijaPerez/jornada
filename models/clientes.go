@@ -9,3 +9,4 @@ type Cliente struct {
     Latitud      float64           `json:"latitud,omitempty"` // Latitud extraída de array_options
     Longitud     float64           `json:"longitud,omitempty"`// Longitud extraída de array_options
 }
+

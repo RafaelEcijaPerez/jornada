@@ -7,21 +7,26 @@ import (
 	"net/http"
 )
 
-func MeetingsHandler(w http.ResponseWriter, r *http.Request) {
-    // Supongamos que ya tenemos el userID de la sesión o del login
-    userID := 1 // Deberías obtener el userID dinámicamente de la autenticación
+func GetTodayMeetingsHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Authorization")
+	if token == "" {
+		http.Error(w, "Token requerido", http.StatusUnauthorized)
+		return
+	}
 
-    // Obtén las reuniones desde Dolibarr
-    meetings, err := services.GetMeetingsForUser(userID)
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error al obtener reuniones: %v", err), http.StatusInternalServerError)
-        return
-    }
+	userID := 123 // Simulación, en producción extraer del token u otro método
 
-    // Filtra las reuniones para hoy
-    meetingsToday := services.FilterMeetingsByDateAndUser(meetings, userID)
+	ms := services.NewMeetingService()
 
-    // Devuelve las reuniones filtradas
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(meetingsToday)
+	meetings, err := ms.GetMeetingsForUser(token)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al obtener reuniones: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	filtered := ms.FilterMeetingsByDateAndUser(meetings, userID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(filtered)
 }
+
